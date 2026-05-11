@@ -126,53 +126,25 @@ function App() {
     setIsLoading(false)
   }
 
-  // ========== AI SUMMARY (using DeepSeek API - FREE) ==========
+  // ========== AI SUMMARY (Static Fallback - No API) ==========
   const generateAiSummary = async (savings, recommendations) => {
-    try {
-      const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY
-      
-      if(!apiKey) {
-        console.log('No API key found, using fallback')
-        setAiSummary(`Based on your AI tool usage, you could save $${savings} per month. ${recommendations.length > 0 ? 'Consider switching to lower-cost plans.' : 'Your current setup is optimized.'}`)
-        return
-      }
-
-      console.log('Calling DeepSeek API...')
-      
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an AI spending expert. Give honest, helpful advice in 80-100 words.'
-            },
-            {
-              role: 'user', 
-              content: `Write a short 80-word personalized summary for a user who can save $${savings} per month on AI tools. Recommendations: ${JSON.stringify(recommendations)}. Be honest - if savings are small (<$20), say they are doing well.`
-            }
-          ],
-          max_tokens: 250
-        })
-      })
-
-      const data = await response.json()
-      console.log('DeepSeek response:', data)
-      
-      if(data.choices && data.choices[0] && data.choices[0].message) {
-        setAiSummary(data.choices[0].message.content)
-      } else {
-        setAiSummary(`✨ Based on our analysis, you could save $${savings} per month. ${recommendations.length > 0 ? 'Check the recommendations above.' : 'Your setup is already optimized!'}`)
-      }
-    } catch(error) {
-      console.error('AI summary failed:', error)
-      setAiSummary(`✨ Estimated savings: $${savings}/month. ${recommendations.length > 0 ? 'Review the recommendations above to start saving.' : 'Your current spending looks optimal.'}`)
+    // Static summary based on savings amount - NO API CALL NEEDED
+    let summary = ""
+    
+    if(savings === 0 || recommendations.length === 0) {
+      summary = "✅ Great news! Based on our analysis, your current AI tool setup is already optimized. You're not overspending. Keep doing what you're doing!"
     }
+    else if(savings < 50) {
+      summary = `📊 You could save $${savings} per month by making small adjustments to your AI subscriptions. While not huge, these savings add up to $${savings * 12} per year. Check the recommendations above for specific actions.`
+    }
+    else if(savings < 200) {
+      summary = `🎯 Good catch! You're overspending by $${savings}/month ($${savings * 12}/year). ${recommendations.length > 0 ? recommendations[0].action : "Review your plans"} - this change is simple and the savings are real.`
+    }
+    else {
+      summary = `🚨 Significant savings detected! You could save $${savings}/month ($${savings * 12}/year). ${recommendations.length > 0 ? recommendations[0].action : "Switch to better plans"} . For savings over $500/month, Credex can help you save even more with discounted enterprise credits.`
+    }
+    
+    setAiSummary(summary)
   }
 
   // ========== SHAREABLE URL ==========
